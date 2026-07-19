@@ -3,7 +3,7 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
+const cors = require('cors');
 var productsRouter = require('./routes/productsRoute');
 var usersRouter = require('./routes/usersRoute');
 let clientsRouter = require('./routes/clientsRoute');
@@ -18,6 +18,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(cors({ origin: 'http://localhost:4000' }));
 app.use('/productos', productsRouter);
 app.use('/usuarios', usersRouter);
 app.use('/clientes', clientsRouter);
@@ -34,7 +35,7 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.send(err.message);a
+  res.send(err.message);
 });
 
 module.exports = app;

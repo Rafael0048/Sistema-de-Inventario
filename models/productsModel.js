@@ -68,9 +68,23 @@ class productsModels{
           
         })
     }
-    static async addStock(productId, stockData) {
+    static async getLot(productId){
+        return new Promise((resolve, reject)=>{
+            Product.findByPk(productId, {
+                    include: [{
+                        model: Lot,
+                        as: 'lot'
+                    }]
+                }).then(products => {
+                    resolve(products.lot);
+                }).catch(err => {
+                    reject(err);
+                });
+        })
+    }
+    static async addStock(stockData) {
         return new Promise((resolve, reject) => {
-            const { quantity, price, date } = stockData;
+            const { quantity, price, date, productId } = stockData;
             Lot.create({ productId, quantity, price, date }).then(result => {
                 resolve(result);
             }).catch(err => {
