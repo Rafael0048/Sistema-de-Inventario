@@ -1,5 +1,5 @@
 const sequelize  = require('../db.js');
-const {DataTypes} = require('sequelize');
+const {DataTypes, Op} = require('sequelize');
 const Client = sequelize.define('Client',{
     name : {
         type: DataTypes.STRING,
@@ -25,8 +25,19 @@ const Client = sequelize.define('Client',{
 },{allowNull: false, timestamps: false});
 
 class clientsModel{
-    static async getClients(clientId){
+    static async getClients(clientId, query){
         return new Promise((resolve, reject) => {
+            const page = parseInt(query.page) || 1;
+            const itemsPerPage = parseInt(query.itemsPerPage) || 10;
+            const search = query.search || '';
+            const whereCondition = search? {
+          [Op.or]: [
+            { name: { [Op.like]: `%${search}%` } },
+          ]
+        }
+      : {};
+            const offset = (page - 1) * itemsPerPage;
+
             if(clientId){
                 Client.findByPk(clientId).then(client => {
                     resolve(client);
@@ -34,7 +45,12 @@ class clientsModel{
                     reject(err);
                 });
             } else {
-                Client.findAll().then(clients => {
+                Client.findAndCountAll({
+                where: whereCondition,
+                limit: itemsPerPage,
+                offset: offset,
+                order: [['clientId', 'DESC']] 
+                }).then(clients => {
                     resolve(clients);
                 }).catch(err => {
                     console.log(err);

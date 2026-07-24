@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Op } = require('sequelize');
 const sequelize =  require('../db.js')
 const Product = sequelize.define('Product', {
     productId: {
@@ -39,9 +39,20 @@ Product.hasMany(Lot, { foreignKey: 'productId', as: 'lot' });
 Lot.belongsTo(Product, { foreignKey: 'productId' });
 
 class productsModels{
-    static async getProducts(productId){
+    static async getProducts(productId, query){
 
         return new Promise((resolve, reject) => {
+            const page = parseInt(query.page) || 1;
+            const itemsPerPage = parseInt(query.itemsPerPage) || 10;
+            const search = query.search || '';
+            const whereCondition = search? {
+          [Op.or]: [
+            { name: { [Op.like]: `%${search}%` } },
+          ]
+        }
+      : {};
+
+            const offset = (page - 1) * itemsPerPage;
             if(productId){
                 Product.findByPk(productId, {
                     include: [{
@@ -54,14 +65,20 @@ class productsModels{
                     reject(err);
                 });
             } else {
-                Product.findAll({
-                    include: [{
+                 Product.findAndCountAll({
+                where: whereCondition,
+                limit: itemsPerPage,
+                offset: offset,
+                include: [{
                         model: Lot,
                         as: 'lot'
-                    }]
-                }).then(products => {
+                    }],
+                order: [['productId', 'DESC']] // Orden por defecto
+                })
+               .then(products => {
                     resolve(products);
                 }).catch(err => {
+                    console.log(err)
                     reject(err);
                 });
             }

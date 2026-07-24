@@ -5,7 +5,8 @@ const productsController = require('../controllers/productsController.js');
 /* GET products listing. */
 router.get('/:id?',verificationToken, async function(req, res, next) {
     try {
-        let products = await productsController.getProducts(req.params.id);
+        console.log(req.query)
+        let products = await productsController.getProducts(req.params.id, req.query);
         res.send(products);
     } catch (error) {
         res.status(500).send({message: 'Error obteniendo los productos', error: error.message});

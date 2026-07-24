@@ -1,8 +1,8 @@
 let productsModels = require('../models/productsModel.js');
 
 class productsController {
-   static async getProducts(productId) {
-        const products = await productsModels.getProducts(productId);
+   static async getProducts(productId, query) {
+        const products = await productsModels.getProducts(productId, query);
         if (products) {
             return products;
         } else {

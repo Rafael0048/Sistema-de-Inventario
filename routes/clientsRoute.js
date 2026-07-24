@@ -3,7 +3,7 @@ let router = express.Router();
 const clientsController = require('../controllers/clientsController.js');   
 router.get('/:id?', async function(req, res) {
     try{
-        const clients = await clientsController.getClients(req.params.id);
+        const clients = await clientsController.getClients(req.params.id, req.query);
         res.send(clients);
     } catch (error) {
         res.status(500).send({ error: error.message });

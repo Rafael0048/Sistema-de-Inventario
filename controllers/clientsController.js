@@ -1,8 +1,8 @@
 const clientsModel = require('../models/clientsModel.js');
 class clientsController {
-    static async getClients(clientId) {
+    static async getClients(clientId, query) {
         try {
-            const clients = await clientsModel.getClients(clientId);
+            const clients = await clientsModel.getClients(clientId, query);
             return clients;
         } catch (error) {
             throw new Error('Error al obtener clientes: ' + error.message);
