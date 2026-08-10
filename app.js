@@ -7,6 +7,7 @@ const cors = require('cors');
 var productsRouter = require('./routes/productsRoute');
 var usersRouter = require('./routes/usersRoute');
 let clientsRouter = require('./routes/clientsRoute');
+let salesRouter = require('./routes/salesRoute')
 var app = express();
 
 // view engine setup
@@ -22,6 +23,7 @@ app.use(cors({ origin: 'http://localhost:4000' }));
 app.use('/productos', productsRouter);
 app.use('/usuarios', usersRouter);
 app.use('/clientes', clientsRouter);
+app.use('/ventas',salesRouter)
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));

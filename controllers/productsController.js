@@ -1,4 +1,4 @@
-let productsModels = require('../models/productsModel.js');
+let {productsModels} = require('../models/productsModel.js');
 
 class productsController {
    static async getProducts(productId, query) {

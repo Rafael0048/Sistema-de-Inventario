@@ -1,4 +1,4 @@
-const clientsModel = require('../models/clientsModel.js');
+const {clientsModel} = require('../models/clientsModel.js');
 class clientsController {
     static async getClients(clientId, query) {
         try {

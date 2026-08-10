@@ -87,4 +87,4 @@ class clientsModel{
         });
      }
 }
-module.exports = clientsModel;
+module.exports = {clientsModel, Client};

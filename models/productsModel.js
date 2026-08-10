@@ -32,7 +32,10 @@ const Lot = sequelize.define('Lot', {
     },
   price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
   date: DataTypes.DATEONLY,
-  quantity: { type: DataTypes.INTEGER, allowNull: false }
+  actualQuantity: { type: DataTypes.INTEGER, allowNull: false },
+    initialQuantity: { type: DataTypes.INTEGER, allowNull: false },
+    status : {type : DataTypes.STRING}
+    
 }, { timestamps: false ,tableName: 'lot'});
 
 Product.hasMany(Lot, { foreignKey: 'productId', as: 'lot' });
@@ -101,8 +104,8 @@ class productsModels{
     }
     static async addStock(stockData) {
         return new Promise((resolve, reject) => {
-            const { quantity, price, date, productId } = stockData;
-            Lot.create({ productId, quantity, price, date }).then(result => {
+            const { initialQuantity,actualQuantity, price, date, productId } = stockData;
+            Lot.create({ productId, initialQuantity, price, date,actualQuantity }).then(result => {
                 resolve(result);
             }).catch(err => {
                 reject(err);
@@ -167,4 +170,4 @@ class productsModels{
      }
 
 }
-module.exports = productsModels;
+module.exports = {productsModels, Product, Lot} ;
