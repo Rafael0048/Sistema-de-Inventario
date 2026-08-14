@@ -20,6 +20,10 @@ const Sale = sequelize.define('Sale',{
         primaryKey: true,
         autoIncrement: true
     },
+    status : {
+        type : DataTypes.STRING,
+        allowNull : false
+    }
     
 },{ timestamps: false});
 const SaleMovement = sequelize.define('SaleMovement',{
@@ -75,6 +79,10 @@ const Payment = sequelize.define('Payment',{
     status : {
         type : DataTypes.STRING,
         allowNull: false
+    },
+    date : {
+        type : DataTypes.DATE,
+        allowNull : false
     }
 },{timestamps: false})
 Sale.hasMany(SaleMovement, { foreignKey: 'saleId', as: 'productosAsociados' });
@@ -158,15 +166,21 @@ class salesModel{
             dolarValue : saleData.dolarValue,
             bsValue : saleData.bsValue,
             method : saleData.method,
-            status : saleData.status
+            status : saleData.status,
+            date : saleData.date
         }
-
+        if(paymentInfo.dolarValue >= saleInfo.totalSale && paymentInfo.status === 'Confirmado'){
+            saleInfo.status = 'Pagado'
+        }else{
+            saleInfo.status = 'Pendiente'
+        }
+        
         Sale.create(saleInfo)
-            .then(sale => {
-                if (!saleData.items || saleData.items.length === 0) {
-                    return resolve(sale);
-                }
-                paymentInfo.saleId = sale.saleId
+        .then(sale => {
+            if (!saleData.items || saleData.items.length === 0) {
+                return resolve(sale);
+            }
+            paymentInfo.saleId = sale.saleId
                 Payment.create(paymentInfo).catch(err =>{reject(err)})
                 const itemPromises = saleData.items.map(item => {
                     return new Promise((resolveItem, rejectItem) => {
