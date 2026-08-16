@@ -1,5 +1,5 @@
 const sequelize = require('../db.js');
-const {DataTypes} = require('sequelize');
+const {DataTypes, Op} = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = sequelize.define('User', {
@@ -20,43 +20,81 @@ const User = sequelize.define('User', {
   name : {
     type: DataTypes.STRING,
     allowNull: false
+  },
+  role: {
+    type : DataTypes.STRING,
+    allowNull: false,
+
   }
 },{allowNull: false, timestamps: false});
 
-class userModel{
-  static async registerUser(userData){
-    return new Promise(async (resolve, reject) => {
+class userModel {
+  static async registerUser(userData) {
+    try{
 
-      const {name, userName, password} = userData;
+      const { name, userName, password, role } = userData;
       const passHash = await bcrypt.hash(password, 10);
-      let result = await User.create({name, userName, password: passHash}).then((result)=>{
-        resolve(result);
-      }).catch((err)=>{
-        reject(new Error(err));
+      let result = await User.create({
+        name,
+        userName,
+        password: passHash,
+        role,
       })
-    })
-
+        return result
     }
-    static async loginUser(userData){
-      return new Promise(async (resolve, reject) => {
-        const {userName, password} = userData;
-        let result = await User.findOne({where: {userName}}).then(async (result)=>{
-          if(result){
-            const isMatch = await bcrypt.compare(password, result.password);
-            if(isMatch){
-              const token = jwt.sign({userId: result.userId, userName: result.userName}, process.env.JWT_SECRET, {expiresIn: '1h'});
-              resolve({user: result.userNamea, token});
-            } else {
-              reject(new Error('Credenciales invalidas'));
+        catch(error){
+        throw error  
             }
-          } else {
-            reject(new Error('Usuario no encontrado'));
-          }
-        }).catch((err)=>{
-          reject(new Error(err));
-        })
-      })
+  }
+  static async loginUser(userData) {
+  try {
+    const { userName, password } = userData;
+    const user = await User.findOne({ where: { userName } });
+    if (!user) {
+      throw new Error('Usuario no encontrado');
     }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new Error('Credenciales inválidas');
+    }
+    const token = jwt.sign(
+      { userId: user.userId, userName: user.userName },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    return {
+      user: {
+        userId: user.userId,
+        userName: user.userName,
+      },
+      token,
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+  static async getUsers(query) {
+    try {
+      const page = parseInt(query.page) || 1;
+      const itemsPerPage = parseInt(query.itemsPerPage) || 10;
+      const search = query.search || "";
+      const offset = (page - 1) * itemsPerPage;
+      const whereCondition = search
+        ? {
+            [Op.or]: [{ name: { [Op.like]: `%${search}%` } }],
+          }
+        : {};
+      let result = await User.findAndCountAll({
+        where: whereCondition,
+        limit: itemsPerPage,
+        offset: offset,
+        attributes: { exclude: ["password"] },
+      });
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = userModel;

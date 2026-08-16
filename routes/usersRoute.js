@@ -15,7 +15,18 @@ router.post('/login', async function(req, res) {
         const result = await userController.loginUser(req.body);
         res.send({message: 'Usuario logueado correctamente', user: result.user, token: result.token});
     } catch (error) {
+        console.log( error)
         res.status(400).send({message: 'Error al iniciar sesión', error: error.message});
+    }
+})
+router.get('/', async function(req, res){
+    try{
+        let result = await userController.getUsers(req.query)
+            res.send(result)
+    }
+    catch(error){
+        console.log(error)
+        res.status(500).send({message: 'Error al obtener usuarios', error: error.message});
     }
 })
 module.exports = router;

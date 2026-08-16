@@ -2,68 +2,81 @@ let {productsModels} = require('../models/productsModel.js');
 
 class productsController {
    static async getProducts(productId, query) {
-        const products = await productsModels.getProducts(productId, query);
-        if (products) {
-            return products;
-        } else {
-            throw new Error('No se encontraron productos');
-        }
+    try{
+
+        const result = await productsModels.getProducts(productId, query);
+            return result;
+        }catch(error){
+            throw error;
+    }
     }
     static async addStock(productId, stockData) {
-        let result = await productsModels.addStock(productId, stockData);
-        if (result) {
+         try{
+        const result = await productsModels.addStock(productId, stockData);
             return result;
-        } else {
-            throw new Error('Error agregando lotes');
-        }
+        }catch(error){
+            throw error;
     }
+    }
+      
     static async addProduct(productData) {
-        let result = await productsModels.addProduct(productData);
-        if (result) {
+         try{
+        const result = await productsModels.addProduct(productData);
             return result;
-        } else {
-            throw new Error('Error agregando productos');
-        }
+        }catch(error){
+            throw error;
     }
+    }
+       
+    
     static async modifyProduct(productId, productData) {
-        let result = await productsModels.modifyProduct(productId, productData);
-        if (result) {
+         try{
+        const result = await productsModels.modifyProduct(productId, productData);
             return result;
-        } else {
-            throw new Error('Error modifucando producto');
-        }
+        }catch(error){
+            throw error;
     }
+    }
+        
+    
     static async deleteProduct(productId) {
-        let result = await productsModels.deleteProduct(productId);
-        if (result) {
+         try{
+        const result = await productsModels.deleteProduct(productId);
             return result;
-        } else {
-            throw new Error('Error eliminando producto');
-        }
+        }catch(error){
+            throw error;
     }
+    }
+    
     static async getLot(productId){
-        let result = await productsModels.getLot(productId)
-        if(result){
+        try{
+
+            const result = await productsModels.getLot(productId)
             return result
-        }else{
-            throw new Error('Error obteniendo los lotes')
+        }catch(error){
+            throw error
         }
+       
     }
     static async modifyStock(lotId, stockData) {
-        let result = await productsModels.modifyStock(lotId, stockData);
-        if (result) {
+        try{
+            const result = await productsModels.modifyStock(lotId, stockData);
             return result;
-        } else {
-            throw new Error('Error modificando los lotes');
+
         }
+        catch(error){
+            throw error
+        }
+        
     }
     static async deleteStock(lotId) {
-        let result = await productsModels.deleteStock(lotId);
-        if (result) {
+        try{
+            const result = await productsModels.deleteStock(lotId);
             return result;
-        } else {
-            throw new Error('Error eliminando el lote');
+        }catch(error){
+            throw error
         }
+        
     }
 }
 

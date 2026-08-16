@@ -26,7 +26,8 @@ const Client = sequelize.define('Client',{
 
 class clientsModel{
     static async getClients(clientId, query){
-        return new Promise((resolve, reject) => {
+        try{
+
             const page = parseInt(query.page) || 1;
             const itemsPerPage = parseInt(query.itemsPerPage) || 10;
             const search = query.search || '';
@@ -38,53 +39,43 @@ class clientsModel{
       : {};
             const offset = (page - 1) * itemsPerPage;
 
-            if(clientId){
-                Client.findByPk(clientId).then(client => {
-                    resolve(client);
-                }).catch(err => {
-                    reject(err);
-                });
-            } else {
-                Client.findAndCountAll({
+              const result = await  Client.findAndCountAll({
                 where: whereCondition,
                 limit: itemsPerPage,
                 offset: offset,
                 order: [['clientId', 'DESC']] 
-                }).then(clients => {
-                    resolve(clients);
-                }).catch(err => {
-                    console.log(err);
-                    reject(err);
-                });
-            }
-        });
+                })
+            return result
+        }catch(error){
+            throw error
+        }
+            
     }
     static async createClient(clientData){
-        return new Promise((resolve, reject) => {
-            Client.create(clientData).then(client => {
-                resolve(client);
-            }).catch(err => {
-                reject(err);
-            });
-        });
-     }
+        try{
+            const result = await Client.create(clientData);
+            return result;
+        }catch(error){
+            throw error;
+        }
+    }
+        
      static async updateClient(clientId, clientData){
-        return new Promise((resolve, reject) => {
-            Client.update(clientData, {where: {clientId}}).then(client => {
-                resolve(client);
-            }).catch(err => {
-                reject(err);
-            });
-     })
+        try{
+            const result = await Client.update(clientData, {where: {clientId}});
+            return result;
+        }catch(error){
+            throw error;
+        }
     }
     static async deleteClient(clientId){
-        return new Promise((resolve, reject) => {
-            Client.destroy({where: {clientId}}).then(client => {
-                resolve(client);
-            }).catch(err => {
-                reject(err);
-            });
-        });
+        try{
+            const result = await Client.destroy({where: {clientId}});
+            return result;
+        }catch(error){
+            throw error;
+        }
      }
 }
 module.exports = {clientsModel, Client};
+           

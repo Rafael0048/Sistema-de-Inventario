@@ -33,4 +33,22 @@ router.delete('/:id', async function(req, res) {
         res.status(500).send({ error: error.message });
     }
 });
+router.post('/payment', async function(req, res){
+    try{
+        const payment = await salesController.createPayment(req.body);
+        res.send(payment);
+    }catch(error){
+        console.log(error)
+        res.status(500).send({ error: error.message });
+    }
+})
+router.put('/payment/:id', async function(req, res){
+    try{
+        const payment = await salesController.updatePayment(req.params.id, req.body);
+        res.send(payment);
+    }catch(error){
+        console.log(error)
+        res.status(500).send({ error: error.message });
+    }
+})
 module.exports = router;

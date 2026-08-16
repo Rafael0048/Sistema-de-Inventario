@@ -32,5 +32,21 @@ class salesController {
             throw new Error('Error al eliminar venta: ' + error.message);
         }
      }
+     static async createPayment(paymentData) {
+        try {
+            const payment = await salesModel.createPayment(paymentData);
+            return payment;
+        } catch (error) {
+            throw new Error('Error al crear pago: ' + error.message);
+        }
+     }
+     static async updatePayment(paymentId, paymentData) {
+        try {
+            const payment = await salesModel.updatePayment(paymentId, paymentData);
+            return payment;
+        } catch (error) {
+            throw new Error('Error al actualizar pago: ' + error.message);
+        }
+     }
 }
 module.exports = salesController;

@@ -98,7 +98,8 @@ Payment.belongsTo(Sale, { foreignKey: 'saleId', as: 'sale' });
 
 class salesModel{
     static async getSales(saleId, query){
-        return new Promise((resolve, reject) => {
+        try{
+
             const page = parseInt(query.page) || 1;
             const itemsPerPage = parseInt(query.itemsPerPage) || 10;
             const search = query.search || '';
@@ -110,14 +111,8 @@ class salesModel{
       : {};
             const offset = (page - 1) * itemsPerPage;
 
-            if(saleId){
-                Sale.findByPk(saleId).then(sale => {
-                    resolve(sale);
-                }).catch(err => {
-                    reject(err);
-                });
-            } else {
-                Sale.findAndCountAll({
+            
+                const result = await Sale.findAndCountAll({
                 where: whereCondition,
                 limit: itemsPerPage,
                 distinct: true,
@@ -144,132 +139,176 @@ class salesModel{
                    }
                 ],
                 order: [['saleId', 'DESC']] 
-                }).then(sales => {
-                    resolve(sales);
-                }).catch(err => {
-                    console.log(err);
-                    reject(err);
-                });
-            }
-        });
+                })
+                return result
+        }catch(error){
+            throw error
+        }
+            
     }
 
-    static createSale(saleData) {
-    return new Promise((resolve, reject) => {
-        // 1. Crear el registro general de la venta
-        const saleInfo = {
-            date: saleData.date,
-            totalSale: saleData.totalSale,
-            clientId: saleData.clientId
-        };
-        const paymentInfo = {
-            dolarValue : saleData.dolarValue,
-            bsValue : saleData.bsValue,
-            method : saleData.method,
-            status : saleData.status,
-            date : saleData.date
-        }
-        if(paymentInfo.dolarValue >= saleInfo.totalSale && paymentInfo.status === 'Confirmado'){
-            saleInfo.status = 'Pagado'
-        }else{
-            saleInfo.status = 'Pendiente'
-        }
-        
-        Sale.create(saleInfo)
-        .then(sale => {
-            if (!saleData.items || saleData.items.length === 0) {
-                return resolve(sale);
-            }
-            paymentInfo.saleId = sale.saleId
-                Payment.create(paymentInfo).catch(err =>{reject(err)})
-                const itemPromises = saleData.items.map(item => {
-                    return new Promise((resolveItem, rejectItem) => {
-                        
-                        Lot.findAll({
-                            where: {
-                                productId: item.productId,
-                                status: 'Disponible',
-                                actualQuantity: { [Op.gt]: 0 } // Solamente lotes con stock > 0
-                            },
-                            order: [
-                                ['date', 'ASC'],
-                                ['lotId', 'ASC']
-                            ]
-                        }).then(lotes => {
-                            // Validar stock total acumulado entre todos los lotes
-                            const totalStockDisponible = lotes.reduce((acc, l) => acc + l.actualQuantity, 0);
-                            
-                            if (totalStockDisponible < item.quantity) {
-                                return rejectItem(new Error(`Stock insuficiente para el producto ID ${item.productId}. Requerido: ${item.quantity}, Disponible: ${totalStockDisponible}`));
-                            }
+    static async createSale(saleData) {
+  const transaction = await sequelize.transaction();
 
-                            let cantidadPendiente = item.quantity;
-                            const movementPromises = [];
+  try {
+    const status = (saleData.dolarValue >= saleData.totalSale && saleData.status === 'Confirmado')
+      ? 'Pagado'
+      : 'Pendiente';
 
-                            // Consumo encadenado de lotes
-                            for (const lote of lotes) {
-                                if (cantidadPendiente <= 0) break;
+    const sale = await Sale.create({
+      date: saleData.date,
+      totalSale: saleData.totalSale,
+      clientId: saleData.clientId,
+      status: status
+    }, { transaction });
 
-                                // Determinar cuánto le restaremos a este lote específico
-                                const cantidadAExtraer = Math.min(lote.actualQuantity, cantidadPendiente);
-                                const nuevaCantidadLote = lote.actualQuantity - cantidadAExtraer;
-                                const nuevoEstado = nuevaCantidadLote === 0 ? 'Vendido' : 'Disponible';
+    await Payment.create({
+      saleId: sale.saleId,
+      dolarValue: saleData.dolarValue,
+      bsValue: saleData.bsValue,
+      method: saleData.method,
+      status: saleData.status,
+      date: saleData.date
+    }, { transaction });
 
-                                // Actualizamos la cantidad y el estado del lote
-                                const updateLotePromise = lote.update({
-                                    actualQuantity: nuevaCantidadLote,
-                                    status: nuevoEstado
-                                }).then(() => {
-                                    // Creamos la línea de movimiento asociada al lote consumido
-                                    return SaleMovement.create({
-                                        saleId: sale.saleId,
-                                        productId: item.productId,
-                                        lotId: lote.lotId,
-                                        quantity: cantidadAExtraer,
-                                        subTotal: cantidadAExtraer * item.price // O el subtotal correspondiente a este lote
-                                    });
-                                });
+    if (!saleData.items || saleData.items.length === 0) {
+      await transaction.commit();
+      return sale;
+    }
 
-                                movementPromises.push(updateLotePromise);
-                                cantidadPendiente -= cantidadAExtraer;
-                            }
+    for (const item of saleData.items) {
+      const lotes = await Lot.findAll({
+        where: {
+          productId: item.productId,
+          status: 'Disponible',
+          actualQuantity: { [Op.gt]: 0 }
+        },
+        order: [
+          ['date', 'ASC'],
+          ['lotId', 'ASC']
+        ],
+        transaction
+      });
 
-                            // Esperamos a que se actualicen todos los lotes y se creen los movimientos de este producto
-                            Promise.all(movementPromises)
-                                .then(() => resolveItem())
-                                .catch(err => rejectItem(err));
+      const totalStockDisponible = lotes.reduce((acc, l) => acc + l.actualQuantity, 0);
 
-                        }).catch(err => rejectItem(err));
-                    });
-                });
+      if (totalStockDisponible < item.quantity) {
+        throw new Error(
+          `Stock insuficiente para el producto ID ${item.productId}. Requerido: ${item.quantity}, Disponible: ${totalStockDisponible}`
+        );
+      }
 
-                // Esperamos a que todos los productos de la venta procesen su FIFO
-                return Promise.all(itemPromises)
-                    .then(() => resolve(sale));
-            })
-            .catch(err => {
-                reject(err);
-            });
-    });
+      let cantidadPendiente = item.quantity;
+
+      for (const lote of lotes) {
+        if (cantidadPendiente <= 0) break;
+
+        const cantidadAExtraer = Math.min(lote.actualQuantity, cantidadPendiente);
+        const nuevaCantidadLote = lote.actualQuantity - cantidadAExtraer;
+        const nuevoEstado = nuevaCantidadLote === 0 ? 'Vendido' : 'Disponible';
+
+        await lote.update({
+          actualQuantity: nuevaCantidadLote,
+          status: nuevoEstado
+        }, { transaction });
+
+        await SaleMovement.create({
+          saleId: sale.saleId,
+          productId: item.productId,
+          lotId: lote.lotId,
+          quantity: cantidadAExtraer,
+          subTotal: cantidadAExtraer * item.price
+        }, { transaction });
+
+        cantidadPendiente -= cantidadAExtraer;
+      }
+    }
+
+    await transaction.commit();
+    return sale;
+
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
      static async updateSale(saleId, saleData){
-        return new Promise((resolve, reject) => {
-            Sale.update(saleData, {where: {saleId}}).then(sale => {
-                resolve(sale);
-            }).catch(err => {
-                reject(err);
-            });
-     })
+        try{
+
+           const result = await Sale.update(saleData, {where: {saleId}})
+           return result
+        }catch(error){
+            throw error
+        }
+            
+     
     }
     static async deleteSale(saleId){
-        return new Promise((resolve, reject) => {
-            Sale.destroy({where: {saleId}}).then(sale => {
-                resolve(sale);
-            }).catch(err => {
-                reject(err);
-            });
-        });
+        try{
+            const result = await Sale.destroy({where: {saleId}})
+            return result
+        }catch(error){
+            throw error
+        }
      }
+     static async createPayment(paymentData) {
+    try {
+        const payment = await Payment.create(paymentData);
+
+        const sale = await Sale.findByPk(paymentData.saleId);
+
+        if (sale) {
+            const totalPaid = await Payment.sum('dolarValue', {
+                where: {
+                    saleId: paymentData.saleId,
+                    status: 'Confirmado'
+                }
+            }) || 0;
+
+            if (totalPaid >= Number(sale.totalSale)) {
+                await sale.update({ status: 'Pagado' });
+            } else if (totalPaid > 0) {
+                await sale.update({ status: 'Pendiente' });
+            }
+        }
+
+        return payment;
+    } catch (error) {
+        throw error;
+    }
+}
+    static async updatePayment(paymentId, paymentData) {
+    try {
+        console.log(paymentId, paymentData)
+        const payment = await Payment.findByPk(paymentId);
+        if (!payment) {
+            throw new Error('Pago no encontrado');
+        }
+
+        await payment.update(paymentData);
+
+        const sale = await Sale.findByPk(payment.saleId);
+
+        if (sale) {
+            const totalPaid = await Payment.sum('dolarValue', {
+                where: {
+                    saleId: payment.saleId,
+                    status: 'Confirmado'
+                }
+            }) || 0;
+
+            let newStatus = 'Pendiente';
+            if (totalPaid >= Number(sale.totalSale)) {
+                newStatus = 'Pagado';
+            } 
+            await sale.update({ status: newStatus });
+        }
+
+        return payment;
+    } catch (error) {
+        throw error;
+    }
+ }
 }
 module.exports = salesModel;

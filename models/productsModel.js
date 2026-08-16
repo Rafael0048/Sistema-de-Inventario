@@ -43,8 +43,7 @@ Lot.belongsTo(Product, { foreignKey: 'productId' });
 
 class productsModels{
     static async getProducts(productId, query){
-
-        return new Promise((resolve, reject) => {
+        try{
             const page = parseInt(query.page) || 1;
             const itemsPerPage = parseInt(query.itemsPerPage) || 10;
             const search = query.search || '';
@@ -53,121 +52,117 @@ class productsModels{
             { name: { [Op.like]: `%${search}%` } },
           ]
         }
-      : {};
+        : {};
+        
+        const offset = (page - 1) * itemsPerPage;
+       const result = await Product.findAndCountAll({
+       where: whereCondition,
+       limit: itemsPerPage,
+       offset: offset,
+       include: [{
+               model: Lot,
+               as: 'lot'
+           }],
+       order: [['productId', 'DESC']] 
+       })
+      return result
+   }
 
-            const offset = (page - 1) * itemsPerPage;
-            if(productId){
-                Product.findByPk(productId, {
-                    include: [{
-                        model: Lot,
-                        as: 'lot'
-                    }]
-                }).then(product => {
-                    resolve(product);
-                }).catch(err => {
-                    reject(err);
-                });
-            } else {
-                 Product.findAndCountAll({
-                where: whereCondition,
-                limit: itemsPerPage,
-                offset: offset,
-                include: [{
-                        model: Lot,
-                        as: 'lot'
-                    }],
-                order: [['productId', 'DESC']] // Orden por defecto
-                })
-               .then(products => {
-                    resolve(products);
-                }).catch(err => {
-                    console.log(err)
-                    reject(err);
-                });
-            }
+        catch(error){
+            throw error
+        }
+           
           
-        })
     }
     static async getLot(productId){
-        return new Promise((resolve, reject)=>{
-            Product.findByPk(productId, {
-                    include: [{
-                        model: Lot,
-                        as: 'lot'
-                    }]
-                }).then(products => {
-                    resolve(products.lot);
-                }).catch(err => {
-                    reject(err);
-                });
-        })
+        try{
+            const result = await Lot.findAll({
+                    where : { productId }
+                })
+                return result
+        }catch(error){
+            throw error
+        }
+           
     }
     static async addStock(stockData) {
-        return new Promise((resolve, reject) => {
+        try{
             const { initialQuantity,actualQuantity, price, date, productId } = stockData;
-            Lot.create({ productId, initialQuantity, price, date,actualQuantity }).then(result => {
-                resolve(result);
-            }).catch(err => {
-                reject(err);
-            });
-        })
+          const result = await  Lot.create({ productId, initialQuantity, price, date,actualQuantity })
+          return result
+        } catch(error){
+            throw error
+        }
     }
     static async addProduct(productData) {
-        return new Promise((resolve, reject) => {
+        try{
             const { name, width, height, length, price, date, quantity  } = productData;
-            Product.create({ name, width, height, length }).then(result => {
-                if(price && quantity && date) {
-                    productsModels.addStock(result.productId, { price, quantity, date })
-                   resolve(result)
-                }else{
-                    resolve(result)}
-               
-                })
-            })
+            const result = await Product.create({ name, width, height, length });
+            if(price && quantity && date) {
+                await productsModels.addStock(result.productId, { price, quantity, date });
+            }
+            return result;
+        } catch(error){
+            throw error;
+        }
+    }
+    static async modifyProduct(productId, productData){
+        try{
+            const { name, width, height, length } = productData;
+            const result = await Product.update({ name, width, height, length }, { where: { productId } });
+            return result;
+        }catch(error){
+            throw error
+        }
         
     }
     static async modifyProduct(productId, productData){
-        return new Promise((resolve,reject)=>{
-        const { name, width, height, length } = productData;
-        Product.update({ name, width, height, length }, { where: { productId } })
-        .then(result => {
-            resolve(result);
-        }).catch(err => {
-            reject(err);
-        });
-    })
+        try{
+
+            const { name, width, height, length } = productData;
+           const result = await Product.update({ name, width, height, length }, { where: { productId } })
+           return result
+        }catch(error){
+            throw error
+        }
+        
     }
     static async deleteProduct(productId){
-        return new Promise((resolve,reject)=>{
-            Product.destroy({ where: { productId } })
-            .then(result => {
-                resolve(result);
-            }).catch(err => {
-                reject(err);w
-            });
-        })
+        try{
+
+            const result = await Product.destroy({ where: { productId } })
+            return result;
+        }catch(error){
+            throw error
+        }
+            
      }
      static async modifyStock(lotId, stockData) {
-        return new Promise((resolve, reject) => {
+        try{
             const { quantity, price, date } = stockData;
-            Lot.update({ quantity, price, date }, { where: { lotId } })
-                .then(result => {
-                    resolve(result);
-                }).catch(err => {
-                    reject(err);
-                });
-        })
+            const result = await Lot.update({ quantity, price, date }, { where: { lotId } });
+            return result;
+        }catch(error){
+            throw error;
+        }
      }
      static async deleteStock(lotId) {
-        return new Promise((resolve, reject) => {
-            Lot.destroy({ where: { lotId } })
-                .then(result => {
-                    resolve(result);
-                }).catch(err => {
-                    reject(err);
-                });
-        })
+        try{
+            const result = await Lot.destroy({ where: { lotId } });
+            return result;
+        }catch(error){
+            throw error;
+        }
      }
 
+     
+     static async deleteStock(lotId) {
+        try{
+            const result = await Lot.destroy({ where: { lotId } });
+            return result;
+        }catch(error){
+            throw error;
+        }
 }
+ }
 module.exports = {productsModels, Product, Lot} ;
