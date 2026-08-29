@@ -1,7 +1,7 @@
 let express = require('express');
 let router = express.Router();
 const userController = require('../controllers/userController.js');
-
+const verificationToken = require('./verificationToken.js');
 router.post('/register', async function(req, res) {
     try{
         await userController.registerUser(req.body);
@@ -13,12 +13,13 @@ router.post('/register', async function(req, res) {
 router.post('/login', async function(req, res) {
     try{
         const result = await userController.loginUser(req.body);
-        res.send({message: 'Usuario logueado correctamente', user: result.user, token: result.token});
+        res.send({message: 'Usuario logueado correctamente', user: result.user, token: result.token, });
     } catch (error) {
         console.log( error)
         res.status(400).send({message: 'Error al iniciar sesión', error: error.message});
     }
 })
+router.use(verificationToken)
 router.get('/', async function(req, res){
     try{
         let result = await userController.getUsers(req.query)

@@ -8,6 +8,7 @@ var productsRouter = require('./routes/productsRoute');
 var usersRouter = require('./routes/usersRoute');
 let clientsRouter = require('./routes/clientsRoute');
 let salesRouter = require('./routes/salesRoute')
+const authRoute = require('./routes/verificationToken')
 var app = express();
 
 // view engine setup
@@ -20,8 +21,9 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(cors({ origin: 'http://localhost:4000' }));
-app.use('/productos', productsRouter);
 app.use('/usuarios', usersRouter);
+app.use(authRoute)
+app.use('/productos', productsRouter);
 app.use('/clientes', clientsRouter);
 app.use('/ventas',salesRouter)
 // catch 404 and forward to error handler

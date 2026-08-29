@@ -58,7 +58,7 @@ class userModel {
       throw new Error('Credenciales inválidas');
     }
     const token = jwt.sign(
-      { userId: user.userId, userName: user.userName },
+      { userId: user.userId, userName: user.userName, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -66,6 +66,7 @@ class userModel {
       user: {
         userId: user.userId,
         userName: user.userName,
+        role: user.role
       },
       token,
     };
@@ -97,4 +98,4 @@ class userModel {
   }
 }
 
-module.exports = userModel;
+module.exports = {userModel, User};

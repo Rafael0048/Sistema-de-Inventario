@@ -1,4 +1,4 @@
-const userModel = require('../models/userModel');
+const {userModel} = require('../models/userModel');
 class userController{
     static async registerUser(userData){
         try{
