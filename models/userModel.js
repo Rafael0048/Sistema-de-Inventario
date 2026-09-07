@@ -96,6 +96,14 @@ class userModel {
       throw error;
     }
   }
+  static async deleteUser(userId){
+          try{
+              const result = await User.destroy({where: {userId}});
+              return result;
+          }catch(error){
+              throw error;
+          }
+       }
 }
 
 module.exports = {userModel, User};

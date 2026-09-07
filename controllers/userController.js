@@ -31,6 +31,15 @@ class userController{
             throw error;
         }
     }
+     static async deleteUser(query){
+        try{
+            let result = await userModel.deleteUser(query)
+            return result
+        }
+        catch(error){
+            throw error;
+        }
+    }
     
  }
 module.exports = userController;

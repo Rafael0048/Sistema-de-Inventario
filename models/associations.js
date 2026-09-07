@@ -1,0 +1,36 @@
+const { Product, Lot, LotMovement } = require('./productsModel.js');
+const { Client } = require('./clientsModel.js');
+const { Purchase, PurchaseMovement, ProviderPayment } = require('./purchaseModel.js');
+const { Sale, SaleMovement, Payment } = require('./salesModel.js');
+const {User} = require('./userModel.js')
+const {Provider} = require('./providerModel.js')
+Product.hasMany(Lot, { foreignKey: 'productId', as: 'lot' });
+Lot.belongsTo(Product, { foreignKey: 'productId', as: 'product' }); 
+Provider.hasMany(Lot, { foreignKey: 'providerId', as: 'lots' });
+Lot.belongsTo(Provider, { foreignKey: 'providerId', as: 'provider' });
+Lot.hasMany(LotMovement, { foreignKey: 'lotId', as: 'movements' });
+LotMovement.belongsTo(Lot, { foreignKey: 'lotId', as: 'lot' }); 
+User.hasMany(LotMovement, { foreignKey: 'userId', as: 'movements' });
+LotMovement.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Purchase.belongsTo(Provider, { foreignKey: 'providerId', as: 'provider' });
+Provider.hasMany(Purchase, { foreignKey: 'providerId', as: 'purchases' });
+Purchase.hasMany(PurchaseMovement, { foreignKey: 'purchaseId', as: 'movements' });
+PurchaseMovement.belongsTo(Purchase, { foreignKey: 'purchaseId', as: 'purchase' });
+PurchaseMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+Product.hasMany(PurchaseMovement, { foreignKey: 'productId', as: 'purchaseMovements' });
+PurchaseMovement.belongsTo(Lot, { foreignKey: 'lotId', as: 'lot' });
+Lot.hasMany(PurchaseMovement, { foreignKey: 'lotId', as: 'purchaseMovements' });
+Purchase.hasMany(ProviderPayment, { foreignKey: 'purchaseId', as: 'payments' });
+ProviderPayment.belongsTo(Purchase, { foreignKey: 'purchaseId', as: 'purchase' });
+ProviderPayment.belongsTo(Provider, { foreignKey: 'providerId', as: 'provider' });
+Provider.hasMany(ProviderPayment, { foreignKey: 'providerId', as: 'payments' });
+Sale.hasMany(SaleMovement, { foreignKey: 'saleId', as: 'productosAsociados' });
+SaleMovement.belongsTo(Sale, { foreignKey: 'saleId' });
+SaleMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+Product.hasMany(SaleMovement, { foreignKey: 'productId' });
+Sale.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
+Client.hasMany(Sale, { foreignKey: 'clientId', as: 'sales' });
+SaleMovement.belongsTo(Lot, { foreignKey: 'lotId', as: 'lot' });
+Lot.hasMany(SaleMovement, { foreignKey: 'lotId' });
+Sale.hasMany(Payment, { foreignKey: 'saleId', as: 'payments' });
+Payment.belongsTo(Sale, { foreignKey: 'saleId', as: 'sale' });

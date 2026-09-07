@@ -30,4 +30,12 @@ router.get('/', async function(req, res){
         res.status(500).send({message: 'Error al obtener usuarios', error: error.message});
     }
 })
+router.delete('/:userId', async function(req, res){
+    try{
+        await userController.deleteUser(req.params.userId);
+        res.send({message: 'Usuario eliminado correctamente'});
+    } catch (error) {
+        res.status(500).send({message: 'Error eliminando el Usuario', error: error.message});
+    }
+});
 module.exports = router;

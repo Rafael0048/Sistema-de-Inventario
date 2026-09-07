@@ -1,7 +1,6 @@
 const { DataTypes, Op, where } = require('sequelize');
 const {User} = require('./userModel.js')
 const sequelize = require('../db.js');
-
 const Product = sequelize.define('Product', {
   productId: {
     type: DataTypes.INTEGER,
@@ -36,7 +35,10 @@ const Lot = sequelize.define('Lot', {
   date: DataTypes.DATEONLY,
   actualQuantity: { type: DataTypes.INTEGER, allowNull: false },
   initialQuantity: { type: DataTypes.INTEGER, allowNull: false },
-  status: { type: DataTypes.STRING }
+  status: { type: DataTypes.STRING },
+  providerId : {
+    type: DataTypes.INTEGER, allowNull: false,
+  }
 }, { timestamps: false, tableName: 'lot' });
 
 const LotMovement = sequelize.define('LotMovement', {
@@ -73,17 +75,12 @@ const LotMovement = sequelize.define('LotMovement', {
 }, { tableName: 'lotmovements', timestamps: false });
 
 // Relaciones
-Product.hasMany(Lot, { foreignKey: 'productId', as: 'lot' });
-Lot.belongsTo(Product, { foreignKey: 'productId', as: 'product' }); // <-- Se agrega alias 'product'
 
-Lot.hasMany(LotMovement, { foreignKey: 'lotId', as: 'movements' });
-LotMovement.belongsTo(Lot, { foreignKey: 'lotId', as: 'lot' }); 
-User.hasMany(LotMovement, { foreignKey: 'userId', as: 'movements' });
-LotMovement.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 class productsModels {
   static async getProducts(productId, query) {
     try {
+      const { Provider } = sequelize.models;
       const page = parseInt(query.page) || 1;
       const itemsPerPage = parseInt(query.itemsPerPage) || 10;
       const search = query.search || '';
@@ -102,6 +99,11 @@ class productsModels {
         include: [{
           model: Lot,
           as: 'lot',
+          include: [{
+            model: Provider,
+            as: 'provider',
+            attributes: ['name']
+          }],
           where : whereLot
         }],
         order: [['productId', 'DESC']] 
@@ -114,7 +116,13 @@ class productsModels {
 
   static async getLot(productId) {
     try {
+      const { Provider } = sequelize.models;
       const result = await Lot.findAll({
+        include: [{
+            model: Provider,
+            as: 'provider',
+            attributes: ['name']
+          }],
         where: { productId }
       });
       return result;
@@ -125,7 +133,7 @@ class productsModels {
 
   static async addStock(stockData) {
     try {
-      const { initialQuantity, actualQuantity, price, date, productId, userId } = stockData;
+      const { initialQuantity, actualQuantity, price, date, productId, userId , providerId } = stockData;
       
       const result = await Lot.create({ 
         productId, 
@@ -133,18 +141,19 @@ class productsModels {
         price, 
         date, 
         actualQuantity,
-        status: 'Disponible'
+        status: 'Disponible',
+        providerId
       });
 
-      // Registro automático del movimiento inicial de entrada
       await LotMovement.create({
         lotId: result.lotId,
         movementType: 'ENTRADA',
         quantity: initialQuantity,
-        motive: 'Ingreso inicial de lote',
+        motive: 'Ingreso de lote',
         userId: userId || 1,
         timeStamp: new Date()
       });
+     
 
       return result;
     } catch (error) {
@@ -194,8 +203,30 @@ class productsModels {
 
   static async modifyStock(lotId, stockData) {
     try {
-      const { quantity, price, date } = stockData;
-      const result = await Lot.update({ actualQuantity: quantity, price, date }, { where: { lotId } });
+      const { quantity, price, date, userId, oldQuantity } = stockData;
+      let result;
+      let movementType;
+      if(quantity>=1){
+         result = await Lot.update({ actualQuantity: quantity, price, date, status:'Disponible' }, { where: { lotId } });
+        }else{
+          result = await Lot.update({ actualQuantity: quantity, price, date, status:'Vendido' }, { where: { lotId } });
+          
+        }
+        const registerQuantity = quantity - oldQuantity;  
+        if(registerQuantity>0){
+          movementType = 'AJUSTE POSITIVO'
+        }else{
+          movementType = 'AJUSTE NEGATIVO'
+        }
+      await LotMovement.create({
+        lotId: lotId,
+        movementType: movementType,
+        quantity: registerQuantity,
+        motive: 'Ajuste del lote',
+        userId: userId || 1,
+        timeStamp: new Date()
+      });
+
       return result;
     } catch (error) {
       throw error;
@@ -284,7 +315,7 @@ class productsModels {
     offset: offset,
     distinct: true,
     include: includeConfig,
-    order: [['timeStamp', 'DESC']]
+    order: [['movementId', 'DESC']]
   });
 
   const totals = await LotMovement.findAll({
@@ -298,16 +329,23 @@ class productsModels {
     raw: true
   });
 
-  const metrics = { totalEntradas: 0, totalVentas: 0, totalMermas: 0 };
+  const metrics = { totalEntradas: 0, totalVentas: 0, totalAjustesNegativos: 0,totalAjustesPositivos: 0 };
 
-  totals.forEach(item => {
-    const type = item.movementType;
-    const sum = Math.abs(Number(item.totalQuantity) || 0);
+ totals.forEach(item => {
+  const type = item.movementType;
+  const rawSum = Number(item.totalQuantity) || 0; 
+  const sum = Math.abs(rawSum);                   
 
-    if (type === 'ENTRADA')  metrics.totalEntradas += sum;
-    else if (type === 'VENTA') metrics.totalVentas += sum;
-    else if (type === 'AJUSTE') metrics.totalMermas += sum;
-  });
+  if (type === 'ENTRADA') {
+    metrics.totalEntradas += sum;
+  } else if (type === 'VENTA') {
+    metrics.totalVentas += sum;
+  } else if (type === 'AJUSTE POSITIVO') {
+      metrics.totalAjustesPositivos += sum;
+    } else if (type === 'AJUSTE NEGATIVO') {
+      metrics.totalAjustesNegativos += sum;
+    }
+  } )
 
   return {
     rows: result.rows,

@@ -84,20 +84,12 @@ const Payment = sequelize.define('Payment', {
   date: {
     type: DataTypes.DATE,
     allowNull: false
-  }
+  },
+ 
 }, { timestamps: false });
 
 // Relaciones
-Sale.hasMany(SaleMovement, { foreignKey: 'saleId', as: 'productosAsociados' });
-SaleMovement.belongsTo(Sale, { foreignKey: 'saleId' });
-SaleMovement.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
-Product.hasMany(SaleMovement, { foreignKey: 'productId' });
-Sale.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
-Client.hasMany(Sale, { foreignKey: 'clientId', as: 'sales' });
-SaleMovement.belongsTo(Lot, { foreignKey: 'lotId', as: 'lot' });
-Lot.hasMany(SaleMovement, { foreignKey: 'lotId' });
-Sale.hasMany(Payment, { foreignKey: 'saleId', as: 'payments' });
-Payment.belongsTo(Sale, { foreignKey: 'saleId', as: 'sale' });
+
 
 class salesModel {
   static async getSales(saleId, query) {
@@ -314,4 +306,4 @@ class salesModel {
   }
 }
 
-module.exports = salesModel;
+module.exports = {salesModel, Payment, Sale, SaleMovement};
